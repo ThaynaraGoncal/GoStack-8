@@ -1,2 +1,0 @@
-# Gobaber
-BootCamp GoBaber
