@@ -1,17 +1,17 @@
-// import * as Yup from 'yup';
+import * as Yup from 'yup';
 import User from '../models/User';
 
 class UserController {
   async store(req, res) {
-    // const schema = Yup.object().shape({
-    //   name: Yup.string().required,
-    //   email: Yup.string().email().required,
-    //   password: Yup.string().required().min(6),
-    // });
+    const schema = Yup.object().shape({
+      name: Yup.string().required,
+      email: Yup.string().email().required,
+      password: Yup.string().required().min(6),
+    });
 
-    // if (!(await schema.isValid(req.body))) {
-    //   return res.status(400).json({ error: 'Validade fails' });
-    // };
+    if (!(await schema.isValid(req.body))) {
+      return res.status(400).json({ error: 'Validade fails' });
+    }
 
     const userExists = await User.findOne({ where: { email: req.body.email } });
 
@@ -30,20 +30,30 @@ class UserController {
   }
 
   async update(req, res) {
+    const schema = Yup.object().shape({
+      name: Yup.string(),
+      email: Yup.string().email(),
+      Oldpassword: Yup.string().min(6),
+      password: Yup.string()
+        .min(6)
+        .when('oldPassword', (oldPassword, field) =>
+          oldPassword ? field.required() : field
+        ),
+    });
+
+    if (!(await schema.isValid(req.body))) {
+      return res.status(400).json({ error: 'Validade fails' });
+    }
+
     const { email, oldPassword } = req.body;
 
     const user = await User.findByPk(req.userId);
 
-    const { email: userEmail } = user.dataValues;
+    if (email !== user.dataValues.email) {
+      const userExists = await User.findOne({ where: { email } });
 
-    console.log(email);
-    console.log(userEmail);
-
-    if (email !== userEmail) {
-      const userExists = await User.findByPk(req.userId);
-      // console.log(userExists);
       if (userExists) {
-        return res.status(400).json({ error: 'Usuário já existe!' });
+        return res.status(400).json({ error: 'Usuário não encontrado' });
       }
     }
 
@@ -51,7 +61,7 @@ class UserController {
       return res.status(401).json({ error: 'Password does not match' });
     }
 
-    const { id, name, provider } = User.update(req.body);
+    const { id, name, provider } = await user.update(req.body);
 
     return res.json({
       id,
